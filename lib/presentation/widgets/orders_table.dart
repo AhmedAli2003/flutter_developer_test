@@ -5,9 +5,13 @@ import 'package:flutter_developer_test/presentation/widgets/order_row.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 
+/// A dynamic and interactive table for entering orders.
+/// Displays multiple rows of products and their quantities.
+/// Also supports notes, images, and product suggestions.
 class OrdersTable extends ConsumerStatefulWidget {
   const OrdersTable({super.key, required this.controller});
 
+  /// External controller to access methods like getFilledRows and clearAll
   final OrdersTableController? controller;
 
   @override
@@ -17,17 +21,21 @@ class OrdersTable extends ConsumerStatefulWidget {
 class _OrdersTableState extends ConsumerState<OrdersTable> {
   int rowCount = 20;
 
+  /// Controllers and focus nodes for product names and quantities
   late List<TextEditingController> productsControllers;
   late List<FocusNode> productsFocusNodes;
   late List<TextEditingController> quantityControllers;
   late List<FocusNode> quantityFocusNodes;
 
+  /// Additional data per row
   late List<String?> notes;
   late List<XFile?> images;
 
   @override
   void initState() {
     super.initState();
+
+    // Initialize lists
     productsControllers = [];
     productsFocusNodes = [];
     quantityControllers = [];
@@ -35,15 +43,20 @@ class _OrdersTableState extends ConsumerState<OrdersTable> {
     notes = [];
     images = [];
 
+    // Start with a fixed number of rows
     _initRows(rowCount);
+
+    // Attach to external controller
     widget.controller?._attach(this);
   }
 
+  /// Initializes a given number of rows and attaches listeners
   void _initRows(int count) {
     for (int i = productsControllers.length; i < count; i++) {
       final pController = TextEditingController();
       final qController = TextEditingController();
 
+      // Optional: add listeners to expand if needed
       pController.addListener(() => _checkToAddMoreRows(i));
       qController.addListener(() => _checkToAddMoreRows(i));
 
@@ -54,11 +67,13 @@ class _OrdersTableState extends ConsumerState<OrdersTable> {
       notes.add(null);
       images.add(null);
     }
+
     rowCount = productsControllers.length;
   }
 
+  /// Checks if the current row is the last and filled.
+  /// If so, adds more rows.
   void _checkToAddMoreRows(int index) {
-    // If user filled the last row, add 10 more rows
     if (index == productsControllers.length - 1) {
       final name = productsControllers[index].text.trim();
       final quantity = quantityControllers[index].text.trim();
@@ -82,6 +97,7 @@ class _OrdersTableState extends ConsumerState<OrdersTable> {
 
   @override
   Widget build(BuildContext context) {
+    // Fetch product suggestions from provider
     final productSuggestions = ref.watch(productSuggestionsProvider).maybeWhen(
           data: (products) => products,
           orElse: () => <String>[],
@@ -109,6 +125,7 @@ class _OrdersTableState extends ConsumerState<OrdersTable> {
     );
   }
 
+  /// Auto-focuses the first incomplete row above the current one
   void handleFocus(int index) {
     for (int i = 0; i < index; i++) {
       if (productsControllers[i].text.trim().isEmpty || quantityControllers[i].text.trim().isEmpty) {
@@ -122,12 +139,14 @@ class _OrdersTableState extends ConsumerState<OrdersTable> {
     }
   }
 
+  /// Opens the modal to add a note/image to a product
   void handleLongPressAndDoubleTap(int index) {
     if (productsControllers[index].text.trim().isNotEmpty) {
       openNoteModal(index);
     }
   }
 
+  /// Shows the bottom modal for notes/images
   void openNoteModal(int index) async {
     await showModalBottomSheet(
       context: context,
@@ -141,6 +160,8 @@ class _OrdersTableState extends ConsumerState<OrdersTable> {
     );
   }
 
+  /// Extracts and validates all filled rows before saving
+  /// Shows SnackBars if any validation fails
   List<(String name, int quantity, XFile? image, String? note)> getFilledRows(BuildContext context) {
     final result = <(String, int, XFile?, String?)>[];
 
@@ -182,6 +203,7 @@ class _OrdersTableState extends ConsumerState<OrdersTable> {
     return result;
   }
 
+  /// Clears all fields and resets notes/images
   void clearAllFields() {
     for (int i = 0; i < productsControllers.length; i++) {
       productsControllers[i].clear();
@@ -193,6 +215,8 @@ class _OrdersTableState extends ConsumerState<OrdersTable> {
   }
 }
 
+/// A controller to access internal methods of OrdersTable from outside.
+/// Used to get validated rows or clear all inputs.
 class OrdersTableController {
   _OrdersTableState? _state;
 
@@ -200,10 +224,12 @@ class OrdersTableController {
     _state = state;
   }
 
+  /// Returns validated filled rows from the table
   List<(String name, int quantity, XFile? image, String? note)> getFilledRows() {
     return _state?.getFilledRows(_state!.context) ?? [];
   }
 
+  /// Clears all table fields and notes/images
   void clearAll() {
     _state?.clearAllFields();
   }
